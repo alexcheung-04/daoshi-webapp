@@ -4,8 +4,8 @@ import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTaskStore } from '@/store/taskStore';
 import { useAuthStore } from '@/store/authStore';
-import { CATEGORY_CONFIG, DAILY_PLAN_LABELS } from '@/types';
-import type { TaskCategory, DailyPlanPreset, PlannedTask } from '@/types';
+import { CATEGORY_CONFIG, DAILY_PLAN_LABELS, REPEAT_MODE_LABELS, WEEKDAY_LABELS } from '@/types';
+import type { TaskCategory, DailyPlanPreset, PlannedTask, RepeatMode } from '@/types';
 
 function generateId(): string {
   return `task-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -73,6 +73,14 @@ const dailyPlanOptions: { value: DailyPlanPreset; label: string }[] = [
   { value: 'frontLoad', label: '提前前移' },
 ];
 
+const repeatOptions: { value: RepeatMode; label: string }[] = [
+  { value: 'once', label: '单次' },
+  { value: 'daily', label: '每天' },
+  { value: 'weekly', label: '每周（自定义）' },
+  { value: 'workdays', label: '法定工作日' },
+  { value: 'holidays', label: '法定节假日' },
+];
+
 export default function TaskEditor() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -94,6 +102,10 @@ export default function TaskEditor() {
   const [fixedEnd, setFixedEnd] = useState('');
   const [repeatsWeekly, setRepeatsWeekly] = useState(false);
   const [locationText, setLocationText] = useState('');
+  // 重复规则（非「学习/作业」任务）
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('once');
+  const [weeklyDays, setWeeklyDays] = useState<number[]>([]);
+  const [saveError, setSaveError] = useState('');
 
   // Track whether user manually changed category
   const [categoryManuallyChanged, setCategoryManuallyChanged] = useState(false);
@@ -124,12 +136,32 @@ export default function TaskEditor() {
       setFixedEnd(existingTask.fixedEnd ? toDatetimeLocal(existingTask.fixedEnd) : '');
       setRepeatsWeekly(existingTask.repeatsWeekly);
       setLocationText(existingTask.locationText || '');
+      setRepeatMode(existingTask.repeatMode || 'once');
+      setWeeklyDays(existingTask.weeklyDays || []);
     }
   }, [existingTask]);
 
+  // 新增任务时自动预填当前系统时间，用户可手动修改
+  useEffect(() => {
+    if (isEdit) return;
+    const now = new Date();
+    const plusOneHour = new Date(now.getTime() + 60 * 60000);
+    if (!fixedStart) setFixedStart(toDatetimeLocal(now.toISOString()));
+    if (!fixedEnd) setFixedEnd(toDatetimeLocal(plusOneHour.toISOString()));
+    if (!deadline) setDeadline(toDatetimeLocal(plusOneHour.toISOString()));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit]);
+
   // ===== Computed values =====
-  const isFocus = category === 'focus';
   const isExam = category === 'exam';
+  // 除「学习/作业」外，任务一律用开始时间 + 结束时间定义（不使用截止时间）
+  const usesTimeRange = category !== 'study';
+
+  const toggleWeekday = (d: number) => {
+    setWeeklyDays((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort((a, b) => a - b)
+    );
+  };
 
   // Determine if auto-detected differs from current selection
   const isCategoryOverridden = categoryManuallyChanged && autoCategory && autoCategory !== category;
@@ -160,19 +192,52 @@ export default function TaskEditor() {
       openLoginModal();
       return;
     }
+    setSaveError('');
     if (!title.trim()) return;
-    if (!deadline && !isFixedTime) return;
+
+    // 时间范围任务：必须填写开始/结束时间且结束晚于开始
+    if (usesTimeRange) {
+      if (!fixedStart || !fixedEnd) {
+        setSaveError('请填写开始时间和结束时间');
+        return;
+      }
+      if (new Date(fixedEnd).getTime() <= new Date(fixedStart).getTime()) {
+        setSaveError('结束时间必须晚于开始时间');
+        return;
+      }
+    } else if (!deadline && !isFixedTime) {
+      return;
+    }
+
+    // 每周（自定义）必须至少选择一个星期
+    if (repeatMode === 'weekly' && weeklyDays.length === 0) {
+      setSaveError('请至少选择一个星期');
+      return;
+    }
+
+    // 时间范围任务：预估时长由开始/结束时间自动计算
+    const computedHours =
+      usesTimeRange && fixedStart && fixedEnd
+        ? Math.max(0.5, Math.round(((new Date(fixedEnd).getTime() - new Date(fixedStart).getTime()) / 3600000) * 10) / 10)
+        : estimatedHours;
 
     const base: Omit<PlannedTask, 'id'> = {
       title: title.trim(),
       category,
-      deadline: deadline ? new Date(deadline).toISOString() : new Date().toISOString(),
-      estimatedHours,
+      deadline:
+        usesTimeRange && fixedEnd
+          ? new Date(fixedEnd).toISOString()
+          : deadline
+            ? new Date(deadline).toISOString()
+            : new Date().toISOString(),
+      estimatedHours: computedHours,
       dailyPlan,
-      isFixedTime,
-      fixedStart: isFixedTime && fixedStart ? fromDatetimeLocal(fixedStart) : undefined,
-      fixedEnd: isFixedTime && fixedEnd ? fromDatetimeLocal(fixedEnd) : undefined,
-      repeatsWeekly: isFixedTime ? repeatsWeekly : false,
+      isFixedTime: usesTimeRange ? true : isFixedTime,
+      fixedStart: (usesTimeRange || isFixedTime) && fixedStart ? fromDatetimeLocal(fixedStart) : undefined,
+      fixedEnd: (usesTimeRange || isFixedTime) && fixedEnd ? fromDatetimeLocal(fixedEnd) : undefined,
+      repeatsWeekly: !usesTimeRange && isFixedTime ? repeatsWeekly : false,
+      repeatMode: usesTimeRange ? repeatMode : 'once',
+      weeklyDays: usesTimeRange && repeatMode === 'weekly' ? weeklyDays : [],
       conflictReminderEnabled: true,
       manualFocusBlocks: existingTask?.manualFocusBlocks || [],
       locationText: locationText.trim() || undefined,
@@ -308,11 +373,44 @@ export default function TaskEditor() {
         {/* ===== Date/Time ===== */}
         <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
           <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">
-            {isFixedTime ? (isFocus ? '专注时段' : '时间范围') : '截止时间'}
+            {usesTimeRange || isFixedTime ? '时间范围' : '截止时间'}
           </label>
 
-          {!isFixedTime ? (
-            /* Flexible: deadline date picker + estimated hours */
+          {usesTimeRange || isFixedTime ? (
+            /* 非学习/作业任务（或学习任务开启固定时间）：开始时间 + 结束时间 */
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 dark:text-gray-500 mb-1">
+                    开始时间
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={fixedStart}
+                    onChange={(e) => setFixedStart(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 dark:text-gray-500 mb-1">
+                    结束时间
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={fixedEnd}
+                    onChange={(e) => setFixedEnd(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                </div>
+              </div>
+              {durationText && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  共 {durationText}
+                </p>
+              )}
+            </div>
+          ) : (
+            /* 学习/作业：截止时间 + 预估时间 + 每日安排 */
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-gray-400 dark:text-gray-500 mb-1">
@@ -368,114 +466,120 @@ export default function TaskEditor() {
                 </div>
               </div>
             </div>
-          ) : isFocus ? (
-            /* Focus: start time + deadline time */
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-400 dark:text-gray-500 mb-1">
-                    开始时间
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={fixedStart}
-                    onChange={(e) => setFixedStart(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 dark:text-gray-500 mb-1">
-                    截止时间
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={fixedEnd}
-                    onChange={(e) => setFixedEnd(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                  />
-                </div>
-              </div>
-              {durationText && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  共 {durationText}
-                </p>
-              )}
-            </div>
-          ) : (
-            /* Fixed (non-focus): start time + end time */
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-400 dark:text-gray-500 mb-1">
-                    开始时间
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={fixedStart}
-                    onChange={(e) => setFixedStart(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 dark:text-gray-500 mb-1">
-                    结束时间
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={fixedEnd}
-                    onChange={(e) => setFixedEnd(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                  />
-                </div>
-              </div>
-              {durationText && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  共 {durationText}
-                </p>
-              )}
-            </div>
           )}
         </div>
 
-        {/* ===== Fixed Time Toggle ===== */}
-        <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              固定时间任务
-            </span>
-            <button
-              onClick={() => setIsFixedTime(!isFixedTime)}
-              className={cn(
-                'w-11 h-6 rounded-full transition-colors relative',
-                isFixedTime ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-              )}
-            >
-              <span
+        {/* ===== 固定时间任务开关（仅学习/作业显示）===== */}
+        {!usesTimeRange && (
+          <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                固定时间任务
+              </span>
+              <button
+                onClick={() => setIsFixedTime(!isFixedTime)}
                 className={cn(
-                  'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform',
-                  isFixedTime && 'translate-x-5'
+                  'w-11 h-6 rounded-full transition-colors relative',
+                  isFixedTime ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
                 )}
-              />
-            </button>
-          </div>
-
-          {/* Repeats Weekly - shown when fixed time is on */}
-          {isFixedTime && (
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={repeatsWeekly}
-                  onChange={(e) => setRepeatsWeekly(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
+              >
+                <span
+                  className={cn(
+                    'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform',
+                    isFixedTime && 'translate-x-5'
+                  )}
                 />
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  每周重复
-                </span>
-              </label>
+              </button>
             </div>
-          )}
-        </div>
+
+            {/* Repeats Weekly - shown when fixed time is on */}
+            {isFixedTime && (
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={repeatsWeekly}
+                    onChange={(e) => setRepeatsWeekly(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
+                  />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    每周重复
+                  </span>
+                </label>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== 重复规则（非学习/作业任务）===== */}
+        {usesTimeRange && (
+          <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">
+              重复
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {repeatOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setRepeatMode(opt.value)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
+                    repeatMode === opt.value
+                      ? 'border-transparent text-white shadow-sm'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  )}
+                  style={
+                    repeatMode === opt.value
+                      ? { backgroundColor: 'rgb(0.01, 0.16, 0.47)' }
+                      : undefined
+                  }
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* 每周（自定义）：选择星期，可多选或单选 */}
+            {repeatMode === 'weekly' && (
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <label className="block text-xs text-gray-400 dark:text-gray-500 mb-2">
+                  选择星期（可多选或单选）
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAY_LABELS.map((label, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => toggleWeekday(idx)}
+                      className={cn(
+                        'w-11 h-11 rounded-full text-sm font-medium border transition-all',
+                        weeklyDays.includes(idx)
+                          ? 'border-transparent text-white shadow-sm'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      )}
+                      style={
+                        weeklyDays.includes(idx)
+                          ? { backgroundColor: 'rgb(0.01, 0.16, 0.47)' }
+                          : undefined
+                      }
+                    >
+                      {label.replace('周', '')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 当前重复规则摘要 */}
+            {repeatMode !== 'once' && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+                {REPEAT_MODE_LABELS[repeatMode]}
+                {repeatMode === 'weekly' && weeklyDays.length > 0
+                  ? `：${weeklyDays.map((d) => WEEKDAY_LABELS[d]).join('、')}`
+                  : ''}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* ===== Location (exam tasks only) ===== */}
         <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
@@ -499,6 +603,9 @@ export default function TaskEditor() {
         {/* ===== Action Buttons ===== */}
         <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
           <div className="flex flex-col gap-3">
+            {saveError && (
+              <p className="text-sm text-red-500 dark:text-red-400 text-center">{saveError}</p>
+            )}
             {/* Save */}
             <button
               onClick={handleSave}

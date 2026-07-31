@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Play,
   SlidersHorizontal,
+  Trash2,
   BookOpen,
   Music,
   Pencil,
@@ -39,12 +40,15 @@ interface Props {
   onToggleComplete?: (id: string) => void;
   onPlay?: (id: string) => void;
   onAdjust?: (id: string) => void;
+  onDelete?: () => void;
 }
 
-export default function ScheduleBlockCard({ block, onToggleComplete, onPlay, onAdjust }: Props) {
+export default function ScheduleBlockCard({ block, onToggleComplete, onPlay, onAdjust, onDelete }: Props) {
   const config = CATEGORY_CONFIG[block.taskCategory];
   const CategoryIcon = CATEGORY_ICONS[block.taskCategory] || BookOpen;
-  const hasActions = onToggleComplete || onPlay || onAdjust;
+  const hasActions = onToggleComplete || onPlay || onAdjust || onDelete;
+  // 没有对应任务的系统块（休息/用餐等）不可操作
+  const showActionRow = hasActions && !!block.taskID;
 
   return (
     <div
@@ -106,14 +110,15 @@ export default function ScheduleBlockCard({ block, onToggleComplete, onPlay, onA
         </div>
       </div>
 
-      {/* Bottom HStack action row */}
-      {hasActions && (block.taskCategory === 'study' || block.taskCategory === 'focus') && (
+      {/* Bottom HStack action row：打勾 / 专注 / 调整时间 / 删除 */}
+      {showActionRow && (
         <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
           {/* Checkmark toggle */}
           {onToggleComplete && (
             <button
               onClick={() => onToggleComplete(block.id)}
               className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="标记完成"
             >
               {block.isBlockCompleted ? (
                 <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -128,23 +133,33 @@ export default function ScheduleBlockCard({ block, onToggleComplete, onPlay, onA
             <button
               onClick={() => onPlay(block.id)}
               className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
+              title="进入专注"
             >
               <Play className="w-5 h-5" />
             </button>
           )}
 
-          {/* Adjust button（对应 iOS：仅弹性学习块与专注块显示） */}
-          {onAdjust &&
-            block.taskID &&
-            (block.taskCategory === 'focus' ||
-              (block.taskCategory === 'study' && block.style !== 'fixed')) && (
-              <button
-                onClick={() => onAdjust(block.id)}
-                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
-              >
-                <SlidersHorizontal className="w-5 h-5" />
-              </button>
-            )}
+          {/* Adjust button */}
+          {onAdjust && (
+            <button
+              onClick={() => onAdjust(block.id)}
+              className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
+              title="调整时间"
+            >
+              <SlidersHorizontal className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Delete button */}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="p-1.5 rounded-full hover:bg-red-50 dark:hover:bg-red-950/40 text-gray-400 hover:text-red-500 transition-colors"
+              title="删除任务"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          )}
         </div>
       )}
     </div>

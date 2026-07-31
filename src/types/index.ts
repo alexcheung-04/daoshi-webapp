@@ -10,6 +10,20 @@ export type AppAppearance = 'system' | 'light' | 'dark';
 
 export type RiskLevel = 'high' | 'medium' | 'low';
 
+/** 重复规则：单次 / 每天 / 每周（自定义星期）/ 法定工作日 / 法定节假日 */
+export type RepeatMode = 'once' | 'daily' | 'weekly' | 'workdays' | 'holidays';
+
+export const REPEAT_MODE_LABELS: Record<RepeatMode, string> = {
+  once: '单次',
+  daily: '每天',
+  weekly: '每周（自定义）',
+  workdays: '法定工作日',
+  holidays: '法定节假日',
+};
+
+/** 星期几：0 = 周日 … 6 = 周六 */
+export const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
 export interface ManualFocusBlock {
   id: string;
   start: string; // ISO 8601
@@ -30,6 +44,10 @@ export interface PlannedTask {
   fixedStart?: string; // ISO 8601
   fixedEnd?: string;   // ISO 8601
   repeatsWeekly: boolean;
+  /** 重复规则（除「学习/作业」外的任务），缺省为单次 */
+  repeatMode?: RepeatMode;
+  /** 每周（自定义）时选中的星期，0=周日 … 6=周六 */
+  weeklyDays?: number[];
   conflictReminderEnabled: boolean;
   manualFocusBlocks: ManualFocusBlock[];
   locationText?: string;
