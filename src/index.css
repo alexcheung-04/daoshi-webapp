@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: rgb(0.01, 0.16, 0.47);
+  --canvas-start: rgb(0.95, 0.97, 1.0);
+  --canvas-end: rgb(0.98, 0.96, 0.99);
+  --card: rgba(255, 255, 255, 0.95);
+  --surface: rgba(255, 255, 255, 0.97);
+  --field: rgb(0.97, 0.98, 1.0);
+  --border: rgba(0, 0, 0, 0.05);
+}
+
+.dark {
+  --canvas-start: rgb(0.08, 0.09, 0.12);
+  --canvas-end: rgb(0.14, 0.10, 0.18);
+  --card: rgb(0.14, 0.15, 0.19);
+  --surface: rgb(0.11, 0.12, 0.16);
+  --field: rgb(0.17, 0.18, 0.23);
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, var(--canvas-start), var(--canvas-end));
+  min-height: 100vh;
+}
+
+.glass-circle {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+.dark .glass-circle {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F7F9FF"/>
+      <stop offset="100%" stop-color="#E7EEFF"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF6F00"/>
+      <stop offset="100%" stop-color="#FFCA28"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 圆角背景 -->
+  <rect width="1024" height="1024" rx="225" fill="url(#bg)"/>
+
+  <!-- 进度环（倒计时） -->
+  <circle cx="512" cy="512" r="290" fill="none" stroke="url(#ring)" stroke-width="22"
+          stroke-dasharray="1400 1822" stroke-linecap="round" transform="rotate(-90 512 512)"/>
+
+  <!-- 外层表圈 -->
+  <circle cx="512" cy="512" r="260" fill="#DCE7FF" opacity="0.98"/>
+  <circle cx="512" cy="512" r="260" fill="none" stroke="rgba(59,89,152,0.14)" stroke-width="2"/>
+
+  <!-- 内圈装饰线 -->
+  <circle cx="512" cy="512" r="180" fill="none" stroke="rgba(59,89,152,0.10)" stroke-width="1"/>
+
+  <!-- 刻度：12, 3, 6, 9 -->
+  <g stroke="rgba(52,73,128,0.58)" stroke-linecap="round">
+    <line x1="512" y1="272" x2="512" y2="302" stroke-width="8"/>
+    <line x1="742" y1="512" x2="712" y2="512" stroke-width="8"/>
+    <line x1="512" y1="752" x2="512" y2="722" stroke-width="8"/>
+    <line x1="282" y1="512" x2="312" y2="512" stroke-width="8"/>
+  </g>
+
+  <!-- 小刻度 -->
+  <g stroke="rgba(52,73,128,0.18)" stroke-linecap="round" stroke-width="4">
+    <line x1="512" y1="252" x2="512" y2="265"/>
+    <line x1="762" y1="512" x2="749" y2="512"/>
+    <line x1="512" y1="772" x2="512" y2="759"/>
+    <line x1="262" y1="512" x2="275" y2="512"/>
+  </g>
+
+  <!-- ===== 最内圈（钟面核心区域）===== -->
+  <circle cx="512" cy="512" r="130" fill="rgba(255,255,255,0.52)"/>
+
+  <!-- ===== 三色圆圈（变小，放在下侧）===== -->
+  <!-- 生活（绿）– 左下 -->
+  <circle cx="460" cy="610" r="10" fill="#66BB6A"/>
+  <circle cx="460" cy="610" r="16" fill="none" stroke="#66BB6A" stroke-width="2" opacity="0.35"/>
+  <!-- 娱乐（黄）– 右下 -->
+  <circle cx="564" cy="610" r="10" fill="#FFCA28"/>
+  <circle cx="564" cy="610" r="16" fill="none" stroke="#FFCA28" stroke-width="2" opacity="0.35"/>
+  <!-- 紧急（红）– 正下方 -->
+  <circle cx="512" cy="632" r="10" fill="#EF5350"/>
+  <circle cx="512" cy="632" r="16" fill="none" stroke="#EF5350" stroke-width="2" opacity="0.35"/>
+
+  <!-- 时针（直线）– 10:10:30 位置 -->
+  <line x1="512" y1="512" x2="434" y2="458" stroke="rgba(32,45,89,0.96)" stroke-width="18" stroke-linecap="round"/>
+
+  <!-- 分针 – 指向2点 -->
+  <line x1="512" y1="512" x2="659" y2="427" stroke="rgba(32,45,89,0.72)" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- 秒针（红色）– 指向6点 -->
+  <line x1="512" y1="512" x2="512" y2="712" stroke="#FF5252" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="512" cy="712" r="5" fill="#FF5252"/>
+
+  <!-- 中心圆点 -->
+  <circle cx="512" cy="512" r="16" fill="rgba(248,251,255,0.98)"/>
+  <circle cx="512" cy="512" r="6" fill="#FF6F00"/>
+</svg>
