@@ -501,6 +501,14 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
               </button>
             )}
           </div>
+
+          {/* 版本号 */}
+          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 text-center">
+            <p className="text-xs text-gray-400 dark:text-gray-500">版本 26.7</p>
+            <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5">
+              倒时 · 日程
+            </p>
+          </div>
         </div>
       </div>
     </>
