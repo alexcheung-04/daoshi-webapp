@@ -152,12 +152,6 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                 支持多模式切换，根据不同场景自动过滤任务类型。
                 配合专注计时功能，让你的学习和工作更加高效。
               </p>
-              <button
-                onClick={() => alert('引导功能将在后续版本中实现')}
-                className="w-full py-2.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-              >
-                重看引导
-              </button>
             </div>
           )}
 
