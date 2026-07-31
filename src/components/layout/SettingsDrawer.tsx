@@ -50,7 +50,6 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [editName, setEditName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
   const [profileError, setProfileError] = useState('');
 
   // LLM local edit state — synced from store on every open
@@ -413,7 +412,7 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                         {profile.name}
                       </div>
                       <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
-                        {profile.email}
+                        @{profile.username}
                       </div>
                     </div>
                   </div>
@@ -424,7 +423,6 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                   <button
                     onClick={() => {
                       setEditName(profile?.name || '');
-                      setEditPhone(profile?.phone || '');
                       setProfileError('');
                       setEditingProfile(true);
                     }}
@@ -446,18 +444,6 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                         className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        手机号 <span className="text-gray-400 font-normal">（选填）</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={editPhone}
-                        onChange={(e) => setEditPhone(e.target.value)}
-                        placeholder="+86 13800138000"
-                        className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                      />
-                    </div>
                     {profileError && (
                       <p className="text-xs text-red-500 dark:text-red-400">{profileError}</p>
                     )}
@@ -473,7 +459,7 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                       </button>
                       <button
                         onClick={() => {
-                          const result = useAuthStore.getState().updateProfile({ name: editName, phone: editPhone });
+                          const result = useAuthStore.getState().updateProfile({ name: editName });
                           if (!result.ok) {
                             setProfileError((result as { ok: false; error: string }).error);
                           } else {

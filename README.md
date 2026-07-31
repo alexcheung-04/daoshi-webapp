@@ -57,14 +57,13 @@
 
 ### 6. 用户系统
 
-- 邮箱 / 手机号注册登录（密码需 8 位以上且含大小写字母和数字）
-- 手机验证码登录（本地模拟演示，验证码会直接显示在登录弹窗中）
-- 微信 / Google / Apple 模拟登录
+- 用户名 + 密码注册登录（用户名 3-20 位字母、数字或下划线；密码需 8 位以上且含大小写字母和数字）
+- 忘记密码：输入用户名即可直接重置密码（本地账号，无需邮箱/手机验证）
 - 不同账号的数据相互隔离（按账号分别存储在 localStorage）
 
 ### 7. 个性化
 
-- 自定义头像（上传图片）、用户名、手机号
+- 自定义头像（上传图片）、用户名
 - 深色模式：跟随系统 / 浅色 / 深色
 - 通知铃声：铃铛 / 叮咚 / 电子 / 提醒
 - 应用模式切换（日常生活 / 复习考试周 / 紧急异常）
@@ -203,14 +202,13 @@ A smart schedule management tool with task scheduling, conflict detection, focus
 
 ### 6. User System
 
-- Email / phone registration & login (password requires 8+ characters with uppercase, lowercase, and digits)
-- Phone verification-code login (locally simulated for demo — the code is shown directly in the login modal)
-- Simulated social login: WeChat / Google / Apple
+- Username + password registration & login (username: 3-20 letters, digits, or underscores; password requires 8+ characters with uppercase, lowercase, and digits)
+- Forgot password: reset by entering your username directly (local account — no email/phone verification needed)
 - Data is isolated per account (stored separately in localStorage)
 
 ### 7. Personalization
 
-- Custom avatar (upload image), username, phone number
+- Custom avatar (upload image), username
 - Dark mode: follow system / light / dark
 - Notification ringtones: Bell / Chime / Electronic / Alert
 - App mode switching (Daily / Exam Prep / Emergency)

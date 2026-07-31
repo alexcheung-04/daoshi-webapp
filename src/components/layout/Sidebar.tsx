@@ -104,7 +104,7 @@ export default function Sidebar({ onToggleSettings }: SidebarProps) {
                 {profile.name}
               </div>
               <div className="text-[11px] text-gray-400 dark:text-gray-500 truncate">
-                {profile.email}
+                @{profile.username}
               </div>
             </div>
           </div>
