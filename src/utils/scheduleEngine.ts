@@ -155,9 +155,11 @@ function buildFixedBlock(task: PlannedTask): ScheduleBlock[] {
     return blocks;
   }
 
-  // 重复展开：从任务开始日起未来 30 天内所有匹配日期，保留原开始/结束的时分
+  // 重复展开：根据 repeatStartDate ~ repeatEndDate 展开匹配日期，保留原开始/结束的时分
   const now = new Date();
-  const windowDays = 30;
+  const repeatStart = task.repeatStartDate ? parseISO(task.repeatStartDate) : start;
+  const repeatEnd = task.repeatEndDate ? parseISO(task.repeatEndDate) : addDays(start, 30);
+  const windowDays = differenceInDays(repeatEnd, repeatStart) + 1;
   const startHour = start.getHours();
   const startMinute = start.getMinutes();
   const endHour = end.getHours();
@@ -187,9 +189,11 @@ function buildFixedBlock(task: PlannedTask): ScheduleBlock[] {
   };
 
   for (let i = 0; i <= windowDays; i++) {
-    const day = addDays(now, i);
+    const day = addDays(startOfDay(repeatStart), i);
     // 不早于任务开始日期
     if (day.getTime() < startOfDay(start).getTime()) continue;
+    // 不晚于重复结束日期
+    if (day.getTime() > endOfDay(repeatEnd).getTime()) continue;
     if (!matches(day)) continue;
 
     const blockStart = new Date(day);

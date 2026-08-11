@@ -57,6 +57,22 @@ function computeDuration(start: string, end: string): string {
   return `${minutes}分钟`;
 }
 
+function toDateInput(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function fromDateInput(val: string): string {
+  if (!val) return '';
+  // 用当天的 00:00 作为 ISO 时间
+  const d = new Date(val + 'T00:00:00');
+  return d.toISOString();
+}
+
 const categories = Object.entries(CATEGORY_CONFIG) as [TaskCategory, typeof CATEGORY_CONFIG[TaskCategory]][];
 
 const dailyPlanOptions: { value: DailyPlanPreset; label: string; description: string }[] = [
@@ -97,9 +113,10 @@ export default function TaskEditor() {
   // 重复规则（非「学习/作业」任务）
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('once');
   const [weeklyDays, setWeeklyDays] = useState<number[]>([]);
+  // 重复日期范围
+  const [repeatStartDate, setRepeatStartDate] = useState('');
+  const [repeatEndDate, setRepeatEndDate] = useState('');
   const [saveError, setSaveError] = useState('');
-  // 自定义颜色
-  const [customColor, setCustomColor] = useState('');
 
   // ===== Load existing task data =====
   useEffect(() => {
@@ -117,7 +134,8 @@ export default function TaskEditor() {
       setLocationText(existingTask.locationText || '');
       setRepeatMode(existingTask.repeatMode || 'once');
       setWeeklyDays(existingTask.weeklyDays || []);
-      setCustomColor(existingTask.color || '');
+      setRepeatStartDate(existingTask.repeatStartDate ? toDateInput(existingTask.repeatStartDate) : '');
+      setRepeatEndDate(existingTask.repeatEndDate ? toDateInput(existingTask.repeatEndDate) : '');
     }
   }, [existingTask]);
 
@@ -207,11 +225,13 @@ export default function TaskEditor() {
       repeatsWeekly: !usesTimeRange && isFixedTime ? repeatsWeekly : false,
       repeatMode: usesTimeRange ? repeatMode : 'once',
       weeklyDays: usesTimeRange && repeatMode === 'weekly' ? weeklyDays : [],
+      repeatStartDate: usesTimeRange && repeatMode !== 'once' && repeatStartDate ? fromDateInput(repeatStartDate) : undefined,
+      repeatEndDate: usesTimeRange && repeatMode !== 'once' && repeatEndDate ? fromDateInput(repeatEndDate) : undefined,
       conflictReminderEnabled: true,
       manualFocusBlocks: existingTask?.manualFocusBlocks || [],
       locationText: locationText.trim() || undefined,
       isCompleted: existingTask?.isCompleted || false,
-      color: customColor || CATEGORY_CONFIG[category].color,
+      color: CATEGORY_CONFIG[category].color,
     };
 
     if (isEdit && id) {
@@ -301,81 +321,6 @@ export default function TaskEditor() {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* ===== 自定义颜色 ===== */}
-        <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
-          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">
-            自定义颜色
-          </label>
-
-          {/* 预设颜色 */}
-          <div className="flex flex-wrap gap-2 mb-3">
-            {[
-              { label: '红色', value: '#EF4444' },
-              { label: '橙色', value: '#F59E0B' },
-              { label: '黄色', value: '#EAB308' },
-              { label: '绿色', value: '#22C55E' },
-              { label: '青色', value: '#14B8A6' },
-              { label: '蓝色', value: '#3B82F6' },
-              { label: '紫色', value: '#8B5CF6' },
-              { label: '粉色', value: '#EC4899' },
-            ].map((color) => (
-              <button
-                key={color.value}
-                onClick={() => setCustomColor(color.value)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
-                  customColor === color.value
-                    ? 'border-transparent text-white shadow-sm'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                )}
-                style={
-                  customColor === color.value && color.value
-                    ? { backgroundColor: color.value }
-                    : undefined
-                }
-              >
-                {color.label}
-              </button>
-            ))}
-          </div>
-
-          {/* 自定义颜色输入 */}
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={customColor || CATEGORY_CONFIG[category].color}
-              onChange={(e) => setCustomColor(e.target.value)}
-              className="w-10 h-10 rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
-            />
-            <input
-              type="text"
-              value={customColor || CATEGORY_CONFIG[category].color}
-              onChange={(e) => setCustomColor(e.target.value)}
-              placeholder={CATEGORY_CONFIG[category].color}
-              className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-            />
-            {customColor && (
-              <button
-                onClick={() => setCustomColor('')}
-                className="px-3 py-2 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                重置
-              </button>
-            )}
-          </div>
-          {customColor && (
-            <div className="mt-2 flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded-full"
-                style={{ backgroundColor: customColor }}
-              />
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                自定义颜色
-              </span>
-            </div>
-          )}
         </div>
 
         {/* ===== Date/Time ===== */}
@@ -507,6 +452,39 @@ export default function TaskEditor() {
                 </button>
               ))}
             </div>
+
+            {/* 重复日期范围 */}
+            {repeatMode !== 'once' && (
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <label className="block text-xs text-gray-400 dark:text-gray-500 mb-2">
+                  重复日期范围
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1">
+                      开始日期
+                    </label>
+                    <input
+                      type="date"
+                      value={repeatStartDate}
+                      onChange={(e) => setRepeatStartDate(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-gray-400 dark:text-gray-500 mb-1">
+                      结束日期
+                    </label>
+                    <input
+                      type="date"
+                      value={repeatEndDate}
+                      onChange={(e) => setRepeatEndDate(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 每周（自定义）：选择星期，可多选或单选 */}
             {repeatMode === 'weekly' && (

@@ -50,6 +50,10 @@ export interface PlannedTask {
   repeatMode?: RepeatMode;
   /** 每周（自定义）时选中的星期，0=周日 … 6=周六 */
   weeklyDays?: number[];
+  /** 重复开始日期，ISO 8601（仅 repeatMode !== 'once' 时有效） */
+  repeatStartDate?: string;
+  /** 重复结束日期，ISO 8601（仅 repeatMode !== 'once' 时有效） */
+  repeatEndDate?: string;
   conflictReminderEnabled: boolean;
   manualFocusBlocks: ManualFocusBlock[];
   locationText?: string;
