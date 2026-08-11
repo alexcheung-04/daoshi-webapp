@@ -53,7 +53,7 @@ function getWeekDays(date: Date): Date[] {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { blocks, conflicts, toggleBlockCompletion, deleteTask } = useTaskStore();
+  const { blocks, conflicts, toggleBlockCompletion, deleteTask, deleteScheduleBlock } = useTaskStore();
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const openLoginModal = useAuthStore((s) => s.openLoginModal);
 
@@ -152,6 +152,18 @@ export default function Dashboard() {
       deleteTask(taskId);
     },
     [isLoggedIn, openLoginModal, deleteTask]
+  );
+
+  // 删除单个块（带登录守卫）
+  const handleDeleteBlock = useCallback(
+    (blockId: string) => {
+      if (!isLoggedIn) {
+        openLoginModal();
+        return;
+      }
+      deleteScheduleBlock(blockId);
+    },
+    [isLoggedIn, openLoginModal, deleteScheduleBlock]
   );
 
   // Close date picker on outside click
@@ -260,7 +272,7 @@ export default function Dashboard() {
                     onAdjust={handleAdjust}
                     onDelete={
                       block.taskID
-                        ? () => handleDeleteTask(block.taskID as string)
+                        ? () => handleDeleteBlock(block.id as string)
                         : undefined
                     }
                   />
@@ -403,7 +415,7 @@ export default function Dashboard() {
                                       <button
                                         onClick={() => {
                                           if (block.taskID)
-                                            handleDeleteTask(block.taskID);
+                                            handleDeleteBlock(block.id);
                                         }}
                                         className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-500 transition-colors"
                                         title="删除任务"
@@ -649,7 +661,7 @@ export default function Dashboard() {
                                 <button
                                   onClick={() => {
                                     if (block.taskID)
-                                      handleDeleteTask(block.taskID);
+                                      handleDeleteBlock(block.id);
                                   }}
                                   className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-500 transition-colors"
                                   title="删除任务"

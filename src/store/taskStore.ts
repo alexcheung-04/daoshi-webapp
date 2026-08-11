@@ -132,6 +132,48 @@ export const useTaskStore = create<TaskState>()(
         get().updateTask(task.id, { manualFocusBlocks: manualBlocks });
       },
 
+      deleteScheduleBlock: (blockId) => {
+        const block = get().blocks.find((b) => b.id === blockId);
+        const task = block?.taskID ? get().tasks.find((t) => t.id === block.taskID) : undefined;
+        if (!block || !task) return;
+
+        // 统一走手动块逻辑：删除单个块，不影响其他重复块
+        let manualBlocks = task.manualFocusBlocks;
+        if (manualBlocks.length === 0) {
+          // 初始化：把该任务当前已排出的所有块（含固定块）固化为手动块
+          manualBlocks = get().blocks
+            .filter((b) => b.taskID === task.id && b.startDate && b.endDate)
+            .map((b) => ({
+              id: `manual-${Date.now()}-${b.id}`,
+              start: b.startDate!,
+              end: b.endDate!,
+              isCompleted: b.isBlockCompleted,
+              dependencyBlockIDs: [],
+            }));
+        }
+
+        const blockStart = new Date(block.startDate!).getTime();
+        const blockEnd = new Date(block.endDate!).getTime();
+        const matchIndex = manualBlocks.findIndex(
+          (b) =>
+            Math.abs(new Date(b.start).getTime() - blockStart) < 60000 &&
+            Math.abs(new Date(b.end).getTime() - blockEnd) < 60000
+        );
+
+        if (matchIndex >= 0) {
+          manualBlocks.splice(matchIndex, 1);
+        }
+
+        // 如果删除后没有块了，删除整个任务
+        if (manualBlocks.length === 0) {
+          get().deleteTask(task.id);
+          return;
+        }
+
+        manualBlocks.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+        get().updateTask(task.id, { manualFocusBlocks: manualBlocks });
+      },
+
       renameFocusBlock: (blockId, newTitle) => {
         const block = get().blocks.find((b) => b.id === blockId);
         const task = block?.taskID ? get().tasks.find((t) => t.id === block.taskID) : undefined;
