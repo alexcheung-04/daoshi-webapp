@@ -50,6 +50,7 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [profileError, setProfileError] = useState('');
 
   // LLM local edit state — synced from store on every open
@@ -152,6 +153,12 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                 支持多模式切换，根据不同场景自动过滤任务类型。
                 配合专注计时功能，让你的学习和工作更加高效。
               </p>
+              <button
+                onClick={() => alert('引导功能将在后续版本中实现')}
+                className="w-full py-2.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+              >
+                重看引导
+              </button>
             </div>
           )}
 
@@ -406,7 +413,7 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                         {profile.name}
                       </div>
                       <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
-                        @{profile.username}
+                        {profile.email}
                       </div>
                     </div>
                   </div>
@@ -417,6 +424,7 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                   <button
                     onClick={() => {
                       setEditName(profile?.name || '');
+                      setEditPhone(profile?.phone || '');
                       setProfileError('');
                       setEditingProfile(true);
                     }}
@@ -438,6 +446,18 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                         className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                       />
                     </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        手机号 <span className="text-gray-400 font-normal">（选填）</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        placeholder="+86 13800138000"
+                        className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                      />
+                    </div>
                     {profileError && (
                       <p className="text-xs text-red-500 dark:text-red-400">{profileError}</p>
                     )}
@@ -453,7 +473,7 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                       </button>
                       <button
                         onClick={() => {
-                          const result = useAuthStore.getState().updateProfile({ name: editName });
+                          const result = useAuthStore.getState().updateProfile({ name: editName, phone: editPhone });
                           if (!result.ok) {
                             setProfileError((result as { ok: false; error: string }).error);
                           } else {
@@ -494,14 +514,6 @@ export default function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                 <span>登录 / 注册</span>
               </button>
             )}
-          </div>
-
-          {/* 版本号 */}
-          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 text-center">
-            <p className="text-xs text-gray-400 dark:text-gray-500">版本 1.2</p>
-            <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5">
-              倒时 · 日程
-            </p>
           </div>
         </div>
       </div>

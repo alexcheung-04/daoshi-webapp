@@ -73,17 +73,14 @@ function playCompletionSound() {
 }
 
 function getTimerMode(task: PlannedTask): TimerMode {
-  // 所有有结束时间的任务都用 deadline 模式（以结束时间为基准倒计时）
-  if (task.isFixedTime && task.fixedEnd) {
-    const end = new Date(task.fixedEnd).getTime();
-    if (end > Date.now()) return 'deadline';
-  }
-  if (task.category === 'exam') return 'deadline';
-  // study 任务如果有 deadline 也用 deadline 模式
-  if (task.category === 'study') {
+  if (task.category === 'focus' || task.category === 'study') {
+    if (task.category === 'focus') return 'focusTimer';
+    // study tasks with a deadline in the future use deadline mode
     const deadline = new Date(task.deadline).getTime();
     if (deadline > Date.now()) return 'deadline';
+    return 'focusTimer';
   }
+  if (task.category === 'exam') return 'deadline';
   return 'focusTimer';
 }
 
@@ -103,12 +100,9 @@ export default function FocusTimer() {
   const getInitialTime = useCallback((): number => {
     if (!task) return 25 * 60; // default 25 min
     if (timerMode === 'deadline') {
-      // 优先使用 fixedEnd（结束时间），否则使用 deadline
-      const endTime = task.isFixedTime && task.fixedEnd
-        ? new Date(task.fixedEnd).getTime()
-        : new Date(task.deadline).getTime();
+      const deadline = new Date(task.deadline).getTime();
       const now = Date.now();
-      return Math.max(0, Math.floor((endTime - now) / 1000));
+      return Math.max(0, Math.floor((deadline - now) / 1000));
     }
     // focusTimer mode: use fixedStart/fixedEnd time range, or estimatedHours
     if (task.isFixedTime && task.fixedStart && task.fixedEnd) {
@@ -168,10 +162,15 @@ export default function FocusTimer() {
 
   // Background color based on mode
   const getBgStyle = useCallback((): React.CSSProperties => {
-    return {
-      backgroundColor: 'white',
-      boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-    };
+    if (timerMode === 'focusTimer') {
+      return { background: 'linear-gradient(180deg, rgb(0.20, 0.08, 0.42), rgb(0.10, 0.04, 0.25))' };
+    }
+    // deadline mode: color based on time remaining
+    const hoursLeft = timeLeft / 3600;
+    if (hoursLeft < 1) return { backgroundColor: 'rgb(0.93, 0.31, 0.24)' };
+    if (hoursLeft < 24) return { backgroundColor: 'rgb(1.0, 0.6, 0.0)' };
+    if (hoursLeft < 48) return { backgroundColor: 'rgb(0.9, 0.8, 0.1)' };
+    return { backgroundColor: 'rgb(0.01, 0.16, 0.47)' };
   }, [timerMode, timeLeft]);
 
   const handleStartPause = () => {
@@ -266,7 +265,7 @@ export default function FocusTimer() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center min-h-[80vh] px-4 rounded-3xl text-gray-900 relative overflow-hidden"
+      className="flex flex-col items-center justify-center min-h-[80vh] px-4 rounded-3xl text-white relative overflow-hidden"
       style={getBgStyle()}
     >
       {/* Alert overlay */}
@@ -298,17 +297,17 @@ export default function FocusTimer() {
       {/* Deadline Mode Layout */}
       {timerMode === 'deadline' && (
         <>
-          <p className="text-[28px] font-bold mb-4 text-gray-900/90">
+          <p className="text-[28px] font-bold mb-4 text-white/90">
             {task.title}剩余
           </p>
-          <p className="text-[92px] font-bold tracking-wider text-gray-900 leading-none mb-4" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", "Helvetica Neue", Arial, sans-serif', fontWeight: 900 }}>
+          <p className="text-[92px] font-bold tracking-wider text-white leading-none mb-4" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", "Helvetica Neue", Arial, sans-serif', fontWeight: 900 }}>
             {formatDeadlineCountdown(timeLeft)}
           </p>
-          <p className="text-[26px] font-bold text-gray-900/80">
-            结束时间：{formatDeadlineDate(task.isFixedTime && task.fixedEnd ? task.fixedEnd : task.deadline)}
+          <p className="text-[26px] font-bold text-white/80">
+            截止时间：{formatDeadlineDate(task.deadline)}
           </p>
           {task.manualFocusBlocks.length > 0 && (
-            <div className="mt-4 text-sm text-gray-900/60">
+            <div className="mt-4 text-sm text-white/60">
               <p>专注时段: {task.manualFocusBlocks.filter(b => !b.isCompleted).length} 个待完成</p>
             </div>
           )}
@@ -318,13 +317,13 @@ export default function FocusTimer() {
       {/* Focus Timer Mode Layout */}
       {timerMode === 'focusTimer' && (
         <>
-          <p className="text-[28px] font-bold mb-4 text-gray-900/90">
+          <p className="text-[28px] font-bold mb-4 text-white/90">
             当前专注时段剩余
           </p>
-          <p className="text-[110px] font-bold tracking-wider text-gray-900 leading-none mb-4" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", "Helvetica Neue", Arial, sans-serif', fontWeight: 900 }}>
+          <p className="text-[110px] font-bold tracking-wider text-white leading-none mb-4" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", "Helvetica Neue", Arial, sans-serif', fontWeight: 900 }}>
             {formatFocusTimer(timeLeft)}
           </p>
-          <p className="text-[24px] font-semibold text-gray-900/88">
+          <p className="text-[24px] font-semibold text-white/88">
             {task.title}
           </p>
         </>
@@ -336,7 +335,7 @@ export default function FocusTimer() {
         <button
           onClick={handleStartPause}
           disabled={isCompleted}
-          className="w-[78px] h-[78px] rounded-full bg-gray-900/10 backdrop-blur-sm flex items-center justify-center text-gray-900 hover:bg-gray-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          className="w-[78px] h-[78px] rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
         >
           {isRunning ? (
             <Pause className="w-8 h-8" />
@@ -348,7 +347,7 @@ export default function FocusTimer() {
         {/* Stop button */}
         <button
           onClick={handleStop}
-          className="w-[78px] h-[78px] rounded-full bg-gray-900/10 backdrop-blur-sm flex items-center justify-center text-gray-900 hover:bg-gray-900/20 transition-all shadow-lg"
+          className="w-[78px] h-[78px] rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-all shadow-lg"
         >
           <StopCircle className="w-8 h-8" />
         </button>
@@ -356,7 +355,7 @@ export default function FocusTimer() {
         {/* Reset button */}
         <button
           onClick={handleReset}
-          className="w-[78px] h-[78px] rounded-full bg-gray-900/10 backdrop-blur-sm flex items-center justify-center text-gray-900 hover:bg-gray-900/20 transition-all shadow-lg"
+          className="w-[78px] h-[78px] rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-all shadow-lg"
         >
           <RotateCcw className="w-8 h-8" />
         </button>

@@ -61,11 +61,11 @@ export function generateSchedule(tasks: PlannedTask[]): ScheduleResult {
   for (const task of tasks) {
     if (task.isCompleted) continue;
 
-    // 固定任务或弹性任务，只要存在手动调整块，就优先按手动块渲染（对应 iOS 手动调整后的专注块）
-    if (task.manualFocusBlocks.length > 0) {
-      manualBlocks.push(...buildManualFocusBlocks(task));
-    } else if (task.isFixedTime && task.fixedStart && task.fixedEnd) {
+    if (task.isFixedTime && task.fixedStart && task.fixedEnd) {
       fixedBlocks.push(...buildFixedBlock(task));
+    } else if (task.manualFocusBlocks.length > 0) {
+      // 已手动调整过时间：按手动调整块排程，不再自动排程（对应 iOS 手动调整后的专注块）
+      manualBlocks.push(...buildManualFocusBlocks(task));
     } else {
       flexibleTasks.push(task);
     }
@@ -88,13 +88,6 @@ export function generateSchedule(tasks: PlannedTask[]): ScheduleResult {
     allBlocks.push(...result.blocks);
     flexibleRisks.push(...result.risks);
   }
-
-  // 所有块按开始时间从早到晚排序
-  allBlocks.sort((a, b) => {
-    const aTime = a.startDate ? new Date(a.startDate).getTime() : 0;
-    const bTime = b.startDate ? new Date(b.startDate).getTime() : 0;
-    return aTime - bTime;
-  });
 
   return { blocks: allBlocks, flexibleRisks };
 }
@@ -132,80 +125,22 @@ function buildFixedBlock(task: PlannedTask): ScheduleBlock[] {
   const start = parseISO(task.fixedStart!);
   const end = parseISO(task.fixedEnd!);
 
-  const repeatMode = task.repeatMode || 'once';
+  if (task.repeatsWeekly) {
+    const now = new Date();
+    const maxDate = task.deadline ? parseISO(task.deadline) : addDays(now, 14);
+    const daysUntilDeadline = differenceInDays(maxDate, now);
+    const maxWeeks = Math.max(1, Math.min(Math.ceil(daysUntilDeadline / 7), 4));
 
-  // 单次（含旧的「每周重复」逻辑回退）
-  if (repeatMode === 'once') {
-    if (task.repeatsWeekly) {
-      const now = new Date();
-      const maxDate = task.deadline ? parseISO(task.deadline) : addDays(now, 14);
-      const daysUntilDeadline = differenceInDays(maxDate, now);
-      const maxWeeks = Math.max(1, Math.min(Math.ceil(daysUntilDeadline / 7), 4));
-
-      for (let w = 0; w < maxWeeks; w++) {
-        const blockStart = addDays(start, w * 7);
-        const blockEnd = addDays(end, w * 7);
-        if (blockStart >= new Date() || isSameDay(blockStart, new Date())) {
-          blocks.push(createBlock(task, blockStart, blockEnd, 'fixed'));
-        }
+    for (let w = 0; w < maxWeeks; w++) {
+      const blockStart = addDays(start, w * 7);
+      const blockEnd = addDays(end, w * 7);
+      if (blockStart >= new Date() || isSameDay(blockStart, new Date())) {
+        blocks.push(createBlock(task, blockStart, blockEnd, 'fixed'));
       }
-    } else {
-      blocks.push(createBlock(task, start, end, 'fixed'));
     }
-    return blocks;
+  } else {
+    blocks.push(createBlock(task, start, end, 'fixed'));
   }
-
-  // 重复展开：从任务开始日起未来 30 天内所有匹配日期，保留原开始/结束的时分
-  const now = new Date();
-  const windowDays = 30;
-  const startHour = start.getHours();
-  const startMinute = start.getMinutes();
-  const endHour = end.getHours();
-  const endMinute = end.getMinutes();
-
-  const matches = (d: Date): boolean => {
-    switch (repeatMode) {
-      case 'daily':
-        return true;
-      case 'weekly': {
-        const days = task.weeklyDays || [];
-        if (days.length === 0) return true; // 未选择星期时退化为每天
-        return days.includes(d.getDay());
-      }
-      case 'workdays': {
-        const day = d.getDay();
-        return day >= 1 && day <= 5; // 周一至周五
-      }
-      case 'holidays': {
-        // 近似实现：周六/周日视为假期；真实「法定节假日」需内置节假日数据源
-        const day = d.getDay();
-        return day === 0 || day === 6;
-      }
-      default:
-        return false;
-    }
-  };
-
-  for (let i = 0; i <= windowDays; i++) {
-    const day = addDays(now, i);
-    // 不早于任务开始日期
-    if (day.getTime() < startOfDay(start).getTime()) continue;
-    if (!matches(day)) continue;
-
-    const blockStart = new Date(day);
-    blockStart.setHours(startHour, startMinute, 0, 0);
-    const blockEnd = new Date(day);
-    blockEnd.setHours(endHour, endMinute, 0, 0);
-    // 跨天结束（如 22:00 - 08:00）→ 结束时间顺延到次日
-    if (blockEnd.getTime() <= blockStart.getTime()) {
-      blockEnd.setDate(blockEnd.getDate() + 1);
-    }
-    // 已过去且不是今天的块不生成
-    if (blockStart.getTime() < now.getTime() && !isSameDay(blockStart, now)) continue;
-
-    blocks.push(createBlock(task, blockStart, blockEnd, 'fixed'));
-  }
-
   return blocks;
 }
 
@@ -233,7 +168,6 @@ function createBlock(task: PlannedTask, start: Date, end: Date, style: ScheduleB
     endDate: end.toISOString(),
     isBlockCompleted: false,
     isBlockDependent: false,
-    color: task.color,
   };
 }
 

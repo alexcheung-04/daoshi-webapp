@@ -1,5 +1,3 @@
-import { BookOpen } from "lucide-react";
-
 export type TaskCategory = 'study' | 'entertainment' | 'exam' | 'focus' | 'life';
 
 export type DailyPlanPreset = 'steady' | 'split' | 'frontLoad';
@@ -11,20 +9,6 @@ export type AppMode = 'daily' | 'examPrep' | 'emergency';
 export type AppAppearance = 'system' | 'light' | 'dark';
 
 export type RiskLevel = 'high' | 'medium' | 'low';
-
-/** 重复规则：单次 / 每天 / 每周（自定义星期）/ 法定工作日 / 法定节假日 */
-export type RepeatMode = 'once' | 'daily' | 'weekly' | 'workdays' | 'holidays';
-
-export const REPEAT_MODE_LABELS: Record<RepeatMode, string> = {
-  once: '单次',
-  daily: '每天',
-  weekly: '每周（自定义）',
-  workdays: '法定工作日',
-  holidays: '法定节假日',
-};
-
-/** 星期几：0 = 周日 … 6 = 周六 */
-export const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
 export interface ManualFocusBlock {
   id: string;
@@ -46,16 +30,10 @@ export interface PlannedTask {
   fixedStart?: string; // ISO 8601
   fixedEnd?: string;   // ISO 8601
   repeatsWeekly: boolean;
-  /** 重复规则（除「学习/作业」外的任务），缺省为单次 */
-  repeatMode?: RepeatMode;
-  /** 每周（自定义）时选中的星期，0=周日 … 6=周六 */
-  weeklyDays?: number[];
   conflictReminderEnabled: boolean;
   manualFocusBlocks: ManualFocusBlock[];
   locationText?: string;
   isCompleted: boolean;
-  /** 自定义颜色（可选，缺省使用类别默认颜色） */
-  color?: string;
 }
 
 export interface ScheduleBlock {
@@ -72,8 +50,6 @@ export interface ScheduleBlock {
   endDate?: string;   // ISO 8601
   isBlockCompleted: boolean;
   isBlockDependent: boolean;
-  /** 自定义颜色（可选，缺省使用类别默认颜色） */
-  color?: string;
 }
 
 export interface Conflict {
@@ -163,7 +139,7 @@ export const CATEGORY_CONFIG: Record<TaskCategory, {
   lightBg: string;
   icon: string;
 }> = {
-  study:     { label: '学习', color: '#3B82F6', lightBg: '#DBEAFE', icon: 'BookOpen' },
+  study:     { label: '学习/作业', color: '#3B82F6', lightBg: '#DBEAFE', icon: 'BookOpen' },
   entertainment: { label: '娱乐', color: '#8B5CF6', lightBg: '#EDE9FE', icon: 'Music' },
   exam:      { label: '上课/考试', color: '#EF4444', lightBg: '#FEE2E2', icon: 'Pencil' },
   focus:     { label: '专注', color: '#F59E0B', lightBg: '#FEF3C7', icon: 'Timer' },

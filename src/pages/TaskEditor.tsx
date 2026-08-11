@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, RotateCcw } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTaskStore } from '@/store/taskStore';
 import { useAuthStore } from '@/store/authStore';
@@ -27,9 +27,28 @@ function fromDatetimeLocal(val: string): string {
   return new Date(val).toISOString();
 }
 
+function toTimeLocal(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+function fromTimeLocal(val: string): string {
+  if (!val) return '';
+  const today = new Date();
+  const [h, m] = val.split(':').map(Number);
+  today.setHours(h, m, 0, 0);
+  return today.toISOString();
+}
+
 function computeDuration(start: string, end: string): string {
   if (!start || !end) return '';
-  const diff = new Date(end).getTime() - new Date(start).getTime();
+  // start/end are "HH:MM" format; convert to today's Date for comparison
+  const startDate = fromTimeLocal(start);
+  const endDate = fromTimeLocal(end);
+  const diff = new Date(endDate).getTime() - new Date(startDate).getTime();
   if (diff <= 0) return '';
   const hours = Math.floor(diff / 3600000);
   const minutes = Math.floor((diff % 3600000) / 60000);
@@ -38,39 +57,12 @@ function computeDuration(start: string, end: string): string {
   return `${minutes}分钟`;
 }
 
-// Auto-detect category from title keywords
-function autoDetectCategory(title: string): TaskCategory | null {
-  const lower = title.toLowerCase();
-
-  // exam keywords
-  const examKeywords = ['考试', '测验', '期末', '期中', '考', 'exam', 'test', 'quiz', 'final', 'midterm', '上课', '听课', '讲座', 'class', 'lecture'];
-  if (examKeywords.some(k => lower.includes(k))) return 'exam';
-
-  // study keywords
-  const studyKeywords = ['学习', '作业', '复习', '预习', '读书', '阅读', '写', '做', 'study', 'homework', 'assignment', 'read', 'research', 'project', '论文', '报告', '实验'];
-  if (studyKeywords.some(k => lower.includes(k))) return 'study';
-
-  // entertainment keywords
-  const entertainmentKeywords = ['娱乐', '游戏', '电影', '音乐', '视频', '动漫', '综艺', 'entertainment', 'game', 'movie', 'music', 'video', 'anime', 'play'];
-  if (entertainmentKeywords.some(k => lower.includes(k))) return 'entertainment';
-
-  // focus keywords
-  const focusKeywords = ['专注', '计时', '番茄', 'focus', 'timer', 'pomodoro', '冥想', '深呼吸'];
-  if (focusKeywords.some(k => lower.includes(k))) return 'focus';
-
-  // life keywords
-  const lifeKeywords = ['生活', '日常', '购物', '运动', '健身', '社交', '睡觉', '休息', 'life', 'daily', 'shop', 'workout', 'exercise', 'sleep', 'rest', '吃饭', '散步'];
-  if (lifeKeywords.some(k => lower.includes(k))) return 'life';
-
-  return null;
-}
-
 const categories = Object.entries(CATEGORY_CONFIG) as [TaskCategory, typeof CATEGORY_CONFIG[TaskCategory]][];
 
-const dailyPlanOptions: { value: DailyPlanPreset; label: string }[] = [
-  { value: 'steady', label: '稳步推进' },
-  { value: 'split', label: '拆成多段' },
-  { value: 'frontLoad', label: '提前前移' },
+const dailyPlanOptions: { value: DailyPlanPreset; label: string; description: string }[] = [
+  { value: 'steady', label: '稳步推进', description: '每天安排一段稳定推进' },
+  { value: 'split', label: '拆成多段', description: '拆成多个短时段完成' },
+  { value: 'frontLoad', label: '提前前移', description: '优先前移到更早的可用时间' },
 ];
 
 const repeatOptions: { value: RepeatMode; label: string }[] = [
@@ -106,22 +98,8 @@ export default function TaskEditor() {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('once');
   const [weeklyDays, setWeeklyDays] = useState<number[]>([]);
   const [saveError, setSaveError] = useState('');
-
-  // Track whether user manually changed category
-  const [categoryManuallyChanged, setCategoryManuallyChanged] = useState(false);
-
-  // ===== Auto-detect category from title =====
-  const autoCategory = useMemo(() => {
-    if (!title.trim()) return null;
-    return autoDetectCategory(title);
-  }, [title]);
-
-  // When title changes, auto-update category unless user has manually changed it
-  useEffect(() => {
-    if (!categoryManuallyChanged && autoCategory && autoCategory !== category) {
-      setCategory(autoCategory);
-    }
-  }, [autoCategory]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 自定义颜色
+  const [customColor, setCustomColor] = useState('');
 
   // ===== Load existing task data =====
   useEffect(() => {
@@ -132,12 +110,14 @@ export default function TaskEditor() {
       setEstimatedHours(existingTask.estimatedHours);
       setDailyPlan(existingTask.dailyPlan);
       setIsFixedTime(existingTask.isFixedTime);
-      setFixedStart(existingTask.fixedStart ? toDatetimeLocal(existingTask.fixedStart) : '');
-      setFixedEnd(existingTask.fixedEnd ? toDatetimeLocal(existingTask.fixedEnd) : '');
+      // 时间范围任务只存储时间部分
+      setFixedStart(existingTask.fixedStart ? toTimeLocal(existingTask.fixedStart) : '');
+      setFixedEnd(existingTask.fixedEnd ? toTimeLocal(existingTask.fixedEnd) : '');
       setRepeatsWeekly(existingTask.repeatsWeekly);
       setLocationText(existingTask.locationText || '');
       setRepeatMode(existingTask.repeatMode || 'once');
       setWeeklyDays(existingTask.weeklyDays || []);
+      setCustomColor(existingTask.color || '');
     }
   }, [existingTask]);
 
@@ -146,8 +126,8 @@ export default function TaskEditor() {
     if (isEdit) return;
     const now = new Date();
     const plusOneHour = new Date(now.getTime() + 60 * 60000);
-    if (!fixedStart) setFixedStart(toDatetimeLocal(now.toISOString()));
-    if (!fixedEnd) setFixedEnd(toDatetimeLocal(plusOneHour.toISOString()));
+    if (!fixedStart) setFixedStart(toTimeLocal(now.toISOString()));
+    if (!fixedEnd) setFixedEnd(toTimeLocal(plusOneHour.toISOString()));
     if (!deadline) setDeadline(toDatetimeLocal(plusOneHour.toISOString()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit]);
@@ -163,9 +143,6 @@ export default function TaskEditor() {
     );
   };
 
-  // Determine if auto-detected differs from current selection
-  const isCategoryOverridden = categoryManuallyChanged && autoCategory && autoCategory !== category;
-
   // Duration text
   const durationText = useMemo(() => {
     if (isFixedTime && fixedStart && fixedEnd) {
@@ -177,14 +154,6 @@ export default function TaskEditor() {
   // ===== Handlers =====
   const handleCategorySelect = (cat: TaskCategory) => {
     setCategory(cat);
-    setCategoryManuallyChanged(true);
-  };
-
-  const handleRestoreAutoCategory = () => {
-    if (autoCategory) {
-      setCategory(autoCategory);
-      setCategoryManuallyChanged(false);
-    }
   };
 
   const handleSave = () => {
@@ -218,7 +187,7 @@ export default function TaskEditor() {
     // 时间范围任务：预估时长由开始/结束时间自动计算
     const computedHours =
       usesTimeRange && fixedStart && fixedEnd
-        ? Math.max(0.5, Math.round(((new Date(fixedEnd).getTime() - new Date(fixedStart).getTime()) / 3600000) * 10) / 10)
+        ? Math.max(0.5, Math.round(((new Date(fromTimeLocal(fixedEnd)).getTime() - new Date(fromTimeLocal(fixedStart)).getTime()) / 3600000) * 10) / 10)
         : estimatedHours;
 
     const base: Omit<PlannedTask, 'id'> = {
@@ -226,15 +195,15 @@ export default function TaskEditor() {
       category,
       deadline:
         usesTimeRange && fixedEnd
-          ? new Date(fixedEnd).toISOString()
+          ? new Date(fromTimeLocal(fixedEnd)).toISOString()
           : deadline
             ? new Date(deadline).toISOString()
             : new Date().toISOString(),
       estimatedHours: computedHours,
       dailyPlan,
       isFixedTime: usesTimeRange ? true : isFixedTime,
-      fixedStart: (usesTimeRange || isFixedTime) && fixedStart ? fromDatetimeLocal(fixedStart) : undefined,
-      fixedEnd: (usesTimeRange || isFixedTime) && fixedEnd ? fromDatetimeLocal(fixedEnd) : undefined,
+      fixedStart: (usesTimeRange || isFixedTime) && fixedStart ? fromTimeLocal(fixedStart) : undefined,
+      fixedEnd: (usesTimeRange || isFixedTime) && fixedEnd ? fromTimeLocal(fixedEnd) : undefined,
       repeatsWeekly: !usesTimeRange && isFixedTime ? repeatsWeekly : false,
       repeatMode: usesTimeRange ? repeatMode : 'once',
       weeklyDays: usesTimeRange && repeatMode === 'weekly' ? weeklyDays : [],
@@ -242,6 +211,7 @@ export default function TaskEditor() {
       manualFocusBlocks: existingTask?.manualFocusBlocks || [],
       locationText: locationText.trim() || undefined,
       isCompleted: existingTask?.isCompleted || false,
+      color: customColor || CATEGORY_CONFIG[category].color,
     };
 
     if (isEdit && id) {
@@ -285,7 +255,7 @@ export default function TaskEditor() {
             </h1>
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-500 ml-11">
-            可直接修改任务名称和时间，任务类型会根据标题自动重新识别。
+            可直接修改任务名称和时间。
           </p>
         </div>
 
@@ -303,37 +273,11 @@ export default function TaskEditor() {
           />
         </div>
 
-        {/* ===== 智能识别任务类型 ===== */}
+        {/* ===== 任务类型 ===== */}
         <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
           <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">
-            智能识别任务类型
+            任务类型
           </label>
-
-          {/* Tags */}
-          <div className="flex items-center gap-2 mb-4">
-            {autoCategory && (
-              <span
-                className="text-[11px] font-medium px-2.5 py-1 rounded-full"
-                style={{
-                  backgroundColor: CATEGORY_CONFIG[autoCategory]?.lightBg,
-                  color: CATEGORY_CONFIG[autoCategory]?.color,
-                }}
-              >
-                自动识别结果: {CATEGORY_CONFIG[autoCategory]?.label}
-              </span>
-            )}
-            {isCategoryOverridden && (
-              <span
-                className="text-[11px] font-medium px-2.5 py-1 rounded-full"
-                style={{
-                  backgroundColor: CATEGORY_CONFIG[category]?.lightBg,
-                  color: CATEGORY_CONFIG[category]?.color,
-                }}
-              >
-                当前保存类型: {CATEGORY_CONFIG[category]?.label}
-              </span>
-            )}
-          </div>
 
           {/* Category chips */}
           <div className="flex flex-wrap gap-2">
@@ -357,26 +301,90 @@ export default function TaskEditor() {
               </button>
             ))}
           </div>
+        </div>
 
-          {/* Restore auto-detection button */}
-          {isCategoryOverridden && (
-            <button
-              onClick={handleRestoreAutoCategory}
-              className="mt-3 flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-            >
-              <RotateCcw className="w-3 h-3" />
-              恢复自动识别结果
-            </button>
+        {/* ===== 自定义颜色 ===== */}
+        <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
+          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">
+            自定义颜色
+          </label>
+
+          {/* 预设颜色 */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {[
+              { label: '红色', value: '#EF4444' },
+              { label: '橙色', value: '#F59E0B' },
+              { label: '黄色', value: '#EAB308' },
+              { label: '绿色', value: '#22C55E' },
+              { label: '青色', value: '#14B8A6' },
+              { label: '蓝色', value: '#3B82F6' },
+              { label: '紫色', value: '#8B5CF6' },
+              { label: '粉色', value: '#EC4899' },
+            ].map((color) => (
+              <button
+                key={color.value}
+                onClick={() => setCustomColor(color.value)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
+                  customColor === color.value
+                    ? 'border-transparent text-white shadow-sm'
+                    : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                )}
+                style={
+                  customColor === color.value && color.value
+                    ? { backgroundColor: color.value }
+                    : undefined
+                }
+              >
+                {color.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 自定义颜色输入 */}
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={customColor || CATEGORY_CONFIG[category].color}
+              onChange={(e) => setCustomColor(e.target.value)}
+              className="w-10 h-10 rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700"
+            />
+            <input
+              type="text"
+              value={customColor || CATEGORY_CONFIG[category].color}
+              onChange={(e) => setCustomColor(e.target.value)}
+              placeholder={CATEGORY_CONFIG[category].color}
+              className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+            {customColor && (
+              <button
+                onClick={() => setCustomColor('')}
+                className="px-3 py-2 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                重置
+              </button>
+            )}
+          </div>
+          {customColor && (
+            <div className="mt-2 flex items-center gap-2">
+              <div
+                className="w-4 h-4 rounded-full"
+                style={{ backgroundColor: customColor }}
+              />
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                自定义颜色
+              </span>
+            </div>
           )}
         </div>
 
         {/* ===== Date/Time ===== */}
         <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
           <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">
-            {usesTimeRange || isFixedTime ? '时间范围' : '截止时间'}
+            {usesTimeRange || (isFixedTime && category !== 'study') ? '时间段' : '提交截止时间'}
           </label>
 
-          {usesTimeRange || isFixedTime ? (
+          {usesTimeRange || (isFixedTime && category !== 'study') ? (
             /* 非学习/作业任务（或学习任务开启固定时间）：开始时间 + 结束时间 */
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -385,7 +393,7 @@ export default function TaskEditor() {
                     开始时间
                   </label>
                   <input
-                    type="datetime-local"
+                    type="time"
                     value={fixedStart}
                     onChange={(e) => setFixedStart(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
@@ -396,7 +404,7 @@ export default function TaskEditor() {
                     结束时间
                   </label>
                   <input
-                    type="datetime-local"
+                    type="time"
                     value={fixedEnd}
                     onChange={(e) => setFixedEnd(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
@@ -414,7 +422,7 @@ export default function TaskEditor() {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-gray-400 dark:text-gray-500 mb-1">
-                  截止日期
+                  提交截止日期
                 </label>
                 <input
                   type="datetime-local"
@@ -425,15 +433,15 @@ export default function TaskEditor() {
               </div>
               <div>
                 <label className="block text-xs text-gray-400 dark:text-gray-500 mb-1">
-                  预估时间（小时）
+                  预估总时间（小时）
                 </label>
                 <input
                   type="number"
                   value={estimatedHours}
-                  onChange={(e) => setEstimatedHours(Math.max(0.5, Math.min(24, parseFloat(e.target.value) || 0.5)))}
+                  onChange={(e) => setEstimatedHours(Math.max(0.5, Math.min(100, parseFloat(e.target.value) || 0.5)))}
                   step={0.5}
                   min={0.5}
-                  max={24}
+                  max={100}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 />
               </div>
@@ -464,52 +472,13 @@ export default function TaskEditor() {
                     </button>
                   ))}
                 </div>
+                <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+                  {dailyPlanOptions.find(o => o.value === dailyPlan)?.description}
+                </p>
               </div>
             </div>
           )}
         </div>
-
-        {/* ===== 固定时间任务开关（仅学习/作业显示）===== */}
-        {!usesTimeRange && (
-          <div className="bg-[var(--surface)] rounded-3xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                固定时间任务
-              </span>
-              <button
-                onClick={() => setIsFixedTime(!isFixedTime)}
-                className={cn(
-                  'w-11 h-6 rounded-full transition-colors relative',
-                  isFixedTime ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
-                )}
-              >
-                <span
-                  className={cn(
-                    'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform',
-                    isFixedTime && 'translate-x-5'
-                  )}
-                />
-              </button>
-            </div>
-
-            {/* Repeats Weekly - shown when fixed time is on */}
-            {isFixedTime && (
-              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={repeatsWeekly}
-                    onChange={(e) => setRepeatsWeekly(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
-                  />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    每周重复
-                  </span>
-                </label>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ===== 重复规则（非学习/作业任务）===== */}
         {usesTimeRange && (

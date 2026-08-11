@@ -32,15 +32,13 @@ export default function FocusBlockEditorModal({ block, onClose }: Props) {
 
   const handleSave = () => {
     if (!start) return;
-    const isoStart = toISO(start);
-    const isoEnd = toISO(end);
     const normalizedEnd =
-      new Date(isoEnd).getTime() > new Date(isoStart).getTime()
-        ? isoEnd
-        : new Date(new Date(isoStart).getTime() + 30 * 60000).toISOString();
+      new Date(end).getTime() > new Date(start).getTime()
+        ? end
+        : new Date(new Date(start).getTime() + 30 * 60000).toISOString();
 
     // 更新时间（对应 iOS updateScheduleBlock）
-    updateScheduleBlock(block.id, isoStart, normalizedEnd);
+    updateScheduleBlock(block.id, toISO(start), normalizedEnd);
 
     // 更新名称（对应 iOS renameFocusBlock）
     if (customTitle.trim() && customTitle.trim() !== block.title) {

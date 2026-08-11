@@ -4,11 +4,6 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 // https://vite.dev/config/
 export default defineConfig({
-  // 部署到 GitHub Pages 项目子路径时需要 base；仅 GitHub Actions 构建时启用，不影响本地开发
-  base: process.env.GITHUB_ACTIONS === 'true' ? '/daoshi-webapp/' : '/',
-  server: {
-    host: '0.0.0.0', // 允许局域网访问
-  },
   build: {
     sourcemap: 'hidden',
   },

@@ -11,11 +11,9 @@ import {
   AlertTriangle,
   ChevronRight as ChevronRightIcon,
   SlidersHorizontal,
-  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTaskStore } from '@/store/taskStore';
-import { useAuthStore } from '@/store/authStore';
 import ScheduleBlockCard from '@/components/ScheduleBlockCard';
 import FocusBlockEditorModal from '@/components/FocusBlockEditorModal';
 import { CATEGORY_CONFIG } from '@/types';
@@ -53,9 +51,7 @@ function getWeekDays(date: Date): Date[] {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { blocks, conflicts, toggleBlockCompletion, deleteTask } = useTaskStore();
-  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
-  const openLoginModal = useAuthStore((s) => s.openLoginModal);
+  const { blocks, conflicts, toggleBlockCompletion } = useTaskStore();
 
   const [viewMode, setViewMode] = useState(0); // 0=列表, 1=日历
   const [calendarLayout, setCalendarLayout] = useState(0); // 0=竖向日期, 1=横向日期
@@ -142,18 +138,6 @@ export default function Dashboard() {
     [blocks]
   );
 
-  // 删除任务（带登录守卫）
-  const handleDeleteTask = useCallback(
-    (taskId: string) => {
-      if (!isLoggedIn) {
-        openLoginModal();
-        return;
-      }
-      deleteTask(taskId);
-    },
-    [isLoggedIn, openLoginModal, deleteTask]
-  );
-
   // Close date picker on outside click
   const handlePickerOverlay = useCallback((e: React.MouseEvent) => {
     if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
@@ -190,7 +174,7 @@ export default function Dashboard() {
                 )}
               >
                 <List className="w-4 h-4" />
-                当日任务
+                列表
               </button>
               <button
                 onClick={() => setViewMode(1)}
@@ -202,7 +186,7 @@ export default function Dashboard() {
                 )}
               >
                 <CalendarDays className="w-4 h-4" />
-                行程/计划
+                日历
               </button>
             </div>
           </div>
@@ -258,11 +242,6 @@ export default function Dashboard() {
                     onToggleComplete={() => toggleBlockCompletion(block.id)}
                     onPlay={handlePlay}
                     onAdjust={handleAdjust}
-                    onDelete={
-                      block.taskID
-                        ? () => handleDeleteTask(block.taskID as string)
-                        : undefined
-                    }
                   />
                 ))}
               </div>
@@ -344,10 +323,14 @@ export default function Dashboard() {
                           <div className="space-y-2">
                             {dateBlocks.map((block) => {
                               const config = CATEGORY_CONFIG[block.taskCategory];
-                              // 有对应任务的时间块才显示操作按钮
-                              const showActions = !!block.taskID;
-                              // 使用自定义颜色或类别默认颜色
-                              const blockColor = block.color || config?.color;
+                              const showActions =
+                                block.taskCategory === 'study' ||
+                                block.taskCategory === 'focus';
+                              const showAdjust =
+                                block.taskID &&
+                                (block.taskCategory === 'focus' ||
+                                  (block.taskCategory === 'study' &&
+                                    block.style !== 'fixed'));
                               return (
                                 <div
                                   key={block.id}
@@ -356,7 +339,7 @@ export default function Dashboard() {
                                   {/* Colored left bar */}
                                   <div
                                     className="w-[6px] rounded-full flex-shrink-0"
-                                    style={{ backgroundColor: blockColor }}
+                                    style={{ backgroundColor: config?.color }}
                                   />
                                   {/* Content */}
                                   <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -367,7 +350,7 @@ export default function Dashboard() {
                                       {block.title}
                                     </span>
                                   </div>
-                                  {/* Per-block action buttons：打勾 / 专注 / 调整时间 / 删除 */}
+                                  {/* Per-block action buttons */}
                                   {showActions && (
                                     <div className="flex items-center gap-1 flex-shrink-0">
                                       <button
@@ -391,25 +374,17 @@ export default function Dashboard() {
                                       >
                                         <Play className="w-4 h-4" />
                                       </button>
-                                      <button
-                                        onClick={() => {
-                                          if (block.taskID) setEditingBlock(block);
-                                        }}
-                                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-500 transition-colors"
-                                        title="调整时间"
-                                      >
-                                        <SlidersHorizontal className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          if (block.taskID)
-                                            handleDeleteTask(block.taskID);
-                                        }}
-                                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-500 transition-colors"
-                                        title="删除任务"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
+                                      {showAdjust && (
+                                        <button
+                                          onClick={() => {
+                                            if (block.taskID) setEditingBlock(block);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-500 transition-colors"
+                                          title="调整时间"
+                                        >
+                                          <SlidersHorizontal className="w-4 h-4" />
+                                        </button>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -590,10 +565,14 @@ export default function Dashboard() {
                     <div className="space-y-3">
                       {selectedDateBlocks.map((block) => {
                         const config = CATEGORY_CONFIG[block.taskCategory];
-                        // 有对应任务的时间块才显示操作按钮
-                        const showActions = !!block.taskID;
-                        // 使用自定义颜色或类别默认颜色
-                        const blockColor = block.color || config?.color;
+                        const showActions =
+                          block.taskCategory === 'study' ||
+                          block.taskCategory === 'focus';
+                        const showAdjust =
+                          block.taskID &&
+                          (block.taskCategory === 'focus' ||
+                            (block.taskCategory === 'study' &&
+                              block.style !== 'fixed'));
                         return (
                           <div
                             key={block.id}
@@ -602,7 +581,7 @@ export default function Dashboard() {
                             {/* Colored left bar 6x42 */}
                             <div
                               className="w-[6px] h-[42px] rounded-full flex-shrink-0 self-center"
-                              style={{ backgroundColor: blockColor }}
+                              style={{ backgroundColor: config?.color }}
                             />
                             {/* Content right VStack */}
                             <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -613,7 +592,7 @@ export default function Dashboard() {
                                 {block.title}
                               </span>
                             </div>
-                            {/* Per-block action buttons：打勾 / 专注 / 调整时间 / 删除 */}
+                            {/* Per-block action buttons */}
                             {showActions && (
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 <button
@@ -637,25 +616,17 @@ export default function Dashboard() {
                                 >
                                   <Play className="w-4 h-4" />
                                 </button>
-                                <button
-                                  onClick={() => {
-                                    if (block.taskID) setEditingBlock(block);
-                                  }}
-                                  className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-500 transition-colors"
-                                  title="调整时间"
-                                >
-                                  <SlidersHorizontal className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if (block.taskID)
-                                      handleDeleteTask(block.taskID);
-                                  }}
-                                  className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-500 transition-colors"
-                                  title="删除任务"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                {showAdjust && (
+                                  <button
+                                    onClick={() => {
+                                      if (block.taskID) setEditingBlock(block);
+                                    }}
+                                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-500 transition-colors"
+                                    title="调整时间"
+                                  >
+                                    <SlidersHorizontal className="w-4 h-4" />
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>

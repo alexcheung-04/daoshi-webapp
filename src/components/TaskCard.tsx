@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
+import { CheckCircle2, Circle, Trash2, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Trash2, CheckCircle2, Circle, Timer, AlertTriangle } from 'lucide-react';
-import type { PlannedTask } from '@/types';
 import { CATEGORY_CONFIG, DAILY_PLAN_LABELS, REPEAT_MODE_LABELS, WEEKDAY_LABELS } from '@/types';
+import type { PlannedTask } from '@/types';
 import { useTaskStore } from '@/store/taskStore';
 
 interface Props {
@@ -12,31 +12,20 @@ interface Props {
   onTimer?: (id: string) => void;
 }
 
-function formatDeadline(iso: string): string {
-  const d = new Date(iso);
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  return `${month}月${day}日 ${hours}:${minutes}`;
-}
-
 export default function TaskCard({ task, onToggleComplete, onDelete, onTimer }: Props) {
   const navigate = useNavigate();
   const config = CATEGORY_CONFIG[task.category];
   const { conflicts } = useTaskStore();
-
-  // Check if any conflict involves blocks from this task
-  const hasOverdueConflict = conflicts.some((c) =>
-    c.involvedBlocks.some((b) => {
-      // We check if any conflict block's title matches the task title
-      return b.title === task.title;
-    })
-  );
+  // 使用自定义颜色或类别默认颜色
+  const taskColor = task.color || config?.color;
 
   const handleClick = () => {
     navigate(`/tasks/${task.id}`);
   };
+
+  const hasConflict = conflicts.some((c) =>
+    c.involvedBlocks.some((b) => b.blockID === task.id)
+  );
 
   return (
     <div
@@ -51,27 +40,17 @@ export default function TaskCard({ task, onToggleComplete, onDelete, onTimer }: 
         {/* Left colored vertical bar */}
         <div
           className="w-[5px] rounded-l flex-shrink-0"
-          style={{ backgroundColor: config?.color }}
+          style={{ backgroundColor: taskColor }}
         />
 
-        {/* Right VStack content */}
+        {/* Right VStack */}
         <div className="flex-1 min-w-0">
-          {/* Title */}
-          <h3
-            className={cn(
-              'font-semibold text-base text-gray-900 dark:text-gray-100 truncate',
-              task.isCompleted && 'line-through text-gray-400 dark:text-gray-500'
-            )}
-          >
-            {task.title}
-          </h3>
-
-          {/* Time display: show date + start time for fixed-time tasks, deadline otherwise */}
-          <p className="font-semibold text-base text-gray-800 dark:text-gray-200 mt-0.5">
-            {task.isFixedTime && task.fixedStart
-              ? formatDeadline(task.fixedStart)
-              : formatDeadline(task.deadline)}
-          </p>
+          {/* Title row */}
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 truncate">
+              {task.title}
+            </h3>
+          </div>
 
           {/* Type + repeat + plan summary */}
           <p className="text-footnote text-gray-500 dark:text-gray-400 mt-0.5">
@@ -89,77 +68,71 @@ export default function TaskCard({ task, onToggleComplete, onDelete, onTimer }: 
             {DAILY_PLAN_LABELS[task.dailyPlan] || '稳步推进'}
           </p>
 
-          {/* Location */}
+          {/* Deadline / time range */}
+          <p className="text-footnote text-gray-400 dark:text-gray-500 mt-1">
+            {task.isFixedTime && task.fixedStart && task.fixedEnd
+              ? `${new Date(task.fixedStart).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} - ${new Date(task.fixedEnd).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+              : `截止：${new Date(task.deadline).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+            }
+          </p>
+
+          {/* Conflict warning */}
+          {hasConflict && (
+            <p className="text-footnote text-red-500 dark:text-red-400 mt-1 font-medium">
+              ⚠ 存在时间冲突，请查看「冲突提醒」
+            </p>
+          )}
+
+          {/* Location (exam tasks) */}
           {task.locationText && (
-            <p className="text-footnote text-gray-400 dark:text-gray-500 mt-0.5">
-              {task.locationText}
+            <p className="text-footnote text-gray-400 dark:text-gray-500 mt-1">
+              📍 {task.locationText}
             </p>
           )}
         </div>
 
-        {/* Top-right action area */}
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          {/* Conflict tag */}
-          {hasOverdueConflict && (
-            <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-              <AlertTriangle className="w-3 h-3" />
-              冲突
-            </span>
-          )}
-
-          {/* Category badge */}
-          {config && (
-            <span
-              className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-              style={{ backgroundColor: config.lightBg, color: config.color }}
+        {/* Checkmark / Timer / Delete buttons */}
+        <div className="flex items-center gap-1">
+          {(task.category === 'study' || task.category === 'focus') && onTimer && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onTimer(task.id);
+              }}
+              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-amber-500 transition-colors"
+              title="进入专注"
             >
-              {config.label}
-            </span>
+              <Timer className="w-4 h-4" />
+            </button>
           )}
-
-          {/* Checkmark / Timer / Delete buttons */}
-          <div className="flex items-center gap-1">
-            {(task.category === 'study' || task.category === 'focus') && onTimer && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTimer(task.id);
-                }}
-                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-amber-500 transition-colors"
-                title="进入专注"
-              >
-                <Timer className="w-4 h-4" />
-              </button>
-            )}
-            {onToggleComplete && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleComplete(task.id);
-                }}
-                className="p-1 rounded-full"
-                title="标记完成"
-              >
-                {task.isCompleted ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
-                ) : (
-                  <Circle className="w-5 h-5 text-gray-300 dark:text-gray-600 hover:text-amber-400 transition-colors" />
-                )}
-              </button>
-            )}
-            {onDelete && !task.isCompleted && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(task.id);
-                }}
-                className="p-1 rounded-full text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                title="删除任务"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+          {onToggleComplete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleComplete(task.id);
+              }}
+              className="p-1 rounded-full"
+              title="标记完成"
+            >
+              {task.isCompleted ? (
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+              ) : (
+                <Circle className="w-5 h-5 text-gray-300 dark:text-gray-600 hover:text-amber-400 transition-colors" />
+              )}
+            </button>
+          )}
+          {onDelete && !task.isCompleted && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(task.id);
+              }}
+              className="p-1 rounded-full text-gray-300 dark:text-gray-600 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="删除任务"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>
