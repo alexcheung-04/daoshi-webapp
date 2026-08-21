@@ -2,7 +2,7 @@
 
 一个智能日程管理工具，支持任务排期、冲突检测、专注计时和人机对话（AI 助手）。纯前端应用，数据保存在浏览器本地，无需服务器即可部署。
 
-![image-20260812211309007](/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260812211309007.png)
+![image-20260812211309007](/daoshi-webapp/README.assets/image-20260812211309007.png)
 
 网页demo版，[点击这里](http://daoshi-webapp.vercel.app/)！
 
@@ -12,9 +12,9 @@
 
 ### 1. 日历 / 列表
 
-<img src="/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260821185902139.png" alt="image-20260821185902139" style="zoom:50%;" />
+<img src="/daoshi-webapp/README.assets/image-20260821185902139.png" alt="image-20260821185902139" style="zoom:50%;" />
 
-<img src="/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260821185920482.png" alt="image-20260821185920482" style="zoom:50%;" />
+<img src="/daoshi-webapp/README.assets/image-20260821185920482.png" alt="image-20260821185920482" style="zoom:50%;" />
 
 - **三种视图模式**：日常生活 / 复习考试周 / 紧急异常（考试周与紧急模式下自动过滤娱乐类任务）
 - **列表模式**：展示当天待完成的任务，支持标记完成、进入专注、调整时间
@@ -28,9 +28,9 @@
 
 ### 2. 已录入任务
 
-![image-20260821185827544](/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260821185827544.png)
+![image-20260821185827544](/daoshi-webapp/README.assets/image-20260821185827544.png)
 
-![image-20260821190119117](/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260821190119117.png)
+![image-20260821190119117](/daoshi-webapp/README.assets/image-20260821190119117.png)
 
 - 查看、搜索、管理所有已录入的任务
 - 新建 / 编辑任务支持以下字段：
@@ -44,7 +44,7 @@
 
 ### 3. 冲突提醒
 
-![image-20260821190408076](/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260821190408076.png)
+![image-20260821190408076](/daoshi-webapp/README.assets/image-20260821190408076.png)
 
 - 自动检测三类冲突：
   - 固定时间段之间的**时间重叠**
@@ -56,7 +56,7 @@
 
 ### 4. 人机对话（AI 助手）
 
-![image-20260821223548095](/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260821223548095.png)
+![image-20260821223548095](/daoshi-webapp/README.assets/image-20260821223548095.png)
 
 - 用自然语言管理日程：
   - 添加新任务、删除任务、修改任务（标题、截止时间、时长、分类等）
@@ -67,7 +67,7 @@
 
 ### 5. 专注计时
 
-![image-20260821190826270](/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260821190826270.png)
+![image-20260821190826270](/daoshi-webapp/README.assets/image-20260821190826270.png)
 
 - 倒计时模式
 - 支持调整专注时间段、为专注块自定义名称（如「复习红黑树」「刷题练习」）
@@ -75,7 +75,7 @@
 
 ### 6. 用户系统
 
-<img src="/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260821224834871.png" alt="image-20260821224834871" style="zoom:50%;" />
+<img src="/daoshi-webapp/README.assets/image-20260821224834871.png" alt="image-20260821224834871" style="zoom:50%;" />
 
 - 用户名 + 密码注册登录（用户名 3-20 位字母、数字或下划线；密码需 8 位以上且含大小写字母和数字）
 - 忘记密码：输入用户名即可直接重置密码（本地账号，无需邮箱/手机验证）
@@ -83,7 +83,7 @@
 
 ### 7. 个性化
 
-<img src="/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260821224910982.png" alt="image-20260821224910982" style="zoom:50%;" /><img src="/Users/alexcheung/Desktop/Software Developments/app开发：倒时·日程/倒时·日程/web/README.assets/image-20260821224934473.png" alt="image-20260821224934473" style="zoom:50%;" />
+<img src="/daoshi-webapp/README.assets/image-20260821224910982.png" alt="image-20260821224910982" style="zoom:50%;" /><img src="/daoshi-webapp/README.assets/image-20260821224934473.png" alt="image-20260821224934473" style="zoom:50%;" />
 
 - 自定义头像（上传图片）、用户名
 - 深色模式：跟随系统 / 浅色 / 深色
